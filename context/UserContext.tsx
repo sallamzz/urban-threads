@@ -35,7 +35,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const pointsData = await pointsRes.json().catch(() => ({}))
       const tierData = await tierRes.json().catch(() => ({}))
 
-      const points =
+      const pointsFromBalance =
         pointsData?.availablePointsBalance ??
         pointsData?.totalPointsBalance ??
         pointsData?.pointsBalance ??
@@ -43,6 +43,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         0
 
       const tier = Array.isArray(tierData) ? tierData[0] : tierData
+      // tier.progress = total accumulated points (same value Gameball awards per order).
+      // Fall back to it when points-balance returns 404/empty (Gameball returns 404
+      // instead of { balance: 0 } for customers with no separate coins balance).
+      const tierProgress: number = tier?.progress ?? 0
+      const points = pointsFromBalance > 0 ? pointsFromBalance : tierProgress
+
       setPlayerInfo({
         points,
         currentTier: tier?.current?.name ?? tier?.tierName ?? undefined,

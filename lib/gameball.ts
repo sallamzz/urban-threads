@@ -13,6 +13,7 @@ const SECRET = process.env.GAMEBALL_SECRET_KEY || ''
 
 const readHeaders: Record<string, string> = {
   APIKey: API_KEY,
+  SecretKey: SECRET,
 }
 
 const writeHeaders: Record<string, string> = {

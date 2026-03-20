@@ -11,11 +11,16 @@ export async function GET(req: NextRequest) {
   }
   try {
     const res = await gbGet(`customers/${encodeURIComponent(id)}/points-balance`)
-    const data = await res.json()
+    const text = await res.text()
+    if (!text || !text.trim()) {
+      // Gameball returns 404 + empty body when no coins balance exists yet
+      return NextResponse.json({ availablePointsBalance: 0 })
+    }
+    const data = JSON.parse(text)
     return NextResponse.json(data, { status: res.status })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
     console.error('[points]', msg)
-    return NextResponse.json({ points: 0 })
+    return NextResponse.json({ availablePointsBalance: 0 })
   }
 }
