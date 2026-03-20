@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-navy-900 text-white antialiased;
+  }
+
+  /* Thin scrollbar for drawer */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-navy-800;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-navy-600 rounded;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-navy-800 border border-navy-700 rounded-xl;
+  }
+
+  /* Gold underline slide-in on nav links */
+  .nav-link {
+    @apply relative;
+  }
+  .nav-link::after {
+    content: '';
+    @apply absolute bottom-0 left-0 h-px w-0 bg-gold-500 transition-all duration-300;
+  }
+  .nav-link:hover::after {
+    @apply w-full;
+  }
+
+  /* Staggered card fade-up */
+  .card-stagger {
+    opacity: 0;
+    animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
