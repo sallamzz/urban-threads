@@ -5,6 +5,9 @@ node_modules/
 .next/
 out/
 
+# Cloudflare / Vercel build output
+.vercel/
+
 # environment variables — never commit secrets
 .env.local
 .env*.local
