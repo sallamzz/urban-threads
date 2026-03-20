@@ -7,39 +7,38 @@
  *   gbDel  — APIKey + SecretKey (delete: release hold)
  */
 
-const BASE = process.env.GAMEBALL_BASE_URL || ''
-const API_KEY = process.env.GAMEBALL_API_KEY || process.env.NEXT_PUBLIC_GAMEBALL_API_KEY || ''
-const SECRET = process.env.GAMEBALL_SECRET_KEY || ''
-
-const readHeaders: Record<string, string> = {
-  APIKey: API_KEY,
-  SecretKey: SECRET,
+function getBase() {
+  return process.env.GAMEBALL_BASE_URL || ''
 }
 
-const writeHeaders: Record<string, string> = {
-  'Content-Type': 'application/json',
-  APIKey: API_KEY,
-  SecretKey: SECRET,
+function getHeaders(includeContentType = false): Record<string, string> {
+  const apiKey = process.env.GAMEBALL_API_KEY || process.env.NEXT_PUBLIC_GAMEBALL_API_KEY || ''
+  const secret = process.env.GAMEBALL_SECRET_KEY || ''
+  return {
+    ...(includeContentType ? { 'Content-Type': 'application/json' } : {}),
+    APIKey: apiKey,
+    SecretKey: secret,
+  }
 }
 
 export function gbGet(path: string) {
-  return fetch(`${BASE}/integrations/${path}`, {
-    headers: readHeaders,
+  return fetch(`${getBase()}/integrations/${path}`, {
+    headers: getHeaders(),
     cache: 'no-store',
   })
 }
 
 export function gbPost(path: string, body: unknown) {
-  return fetch(`${BASE}/integrations/${path}`, {
+  return fetch(`${getBase()}/integrations/${path}`, {
     method: 'POST',
-    headers: writeHeaders,
+    headers: getHeaders(true),
     body: JSON.stringify(body),
   })
 }
 
 export function gbDel(path: string) {
-  return fetch(`${BASE}/integrations/${path}`, {
+  return fetch(`${getBase()}/integrations/${path}`, {
     method: 'DELETE',
-    headers: writeHeaders,
+    headers: getHeaders(),
   })
 }
