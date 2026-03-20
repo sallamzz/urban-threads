@@ -46,15 +46,23 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // tier.progress = total accumulated points (same value Gameball awards per order).
       // Fall back to it when points-balance returns 404/empty (Gameball returns 404
       // instead of { balance: 0 } for customers with no separate coins balance).
-      const tierProgress: number = tier?.progress ?? 0
-      const points = pointsFromBalance > 0 ? pointsFromBalance : tierProgress
+      const rawProgress: number = tier?.progress ?? 0
+      const points = pointsFromBalance > 0 ? pointsFromBalance : rawProgress
+
+      // Compute tier progress as a 0-100 percentage.
+      // Gameball returns raw accumulated spend in `progress` and the threshold in `next.minProgress`.
+      const nextMin: number = tier?.next?.minProgress ?? tier?.next?.minPorgress ?? 0
+      const tierPercentage = nextMin > 0
+        ? Math.min(Math.round((rawProgress / nextMin) * 100), 100)
+        : (rawProgress > 0 ? 100 : undefined) // already at max tier if no next
+      const remaining = nextMin > 0 ? Math.max(0, Math.round(nextMin - rawProgress)) : undefined
 
       setPlayerInfo({
         points,
         currentTier: tier?.current?.name ?? tier?.tierName ?? undefined,
         nextTier: tier?.next?.name ?? undefined,
-        tierProgress: tier?.progress ?? tier?.completionPercentage ?? undefined,
-        pointsToNextTier: tier?.next?.minPorgress ?? undefined,
+        tierProgress: tier?.completionPercentage ?? tierPercentage,
+        pointsToNextTier: remaining,
       })
     } catch {
       // silently fail — show 0 points
