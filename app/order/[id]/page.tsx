@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+export const runtime = 'edge'
+
+import { useEffect, useState, use } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { CheckCircle, Star, Package } from 'lucide-react'
@@ -8,7 +10,8 @@ import { Order } from '@/lib/types'
 import { formatPrice, formatPoints } from '@/lib/utils'
 import { useUser } from '@/context/UserContext'
 
-export default function OrderConfirmationPage({ params }: { params: { id: string } }) {
+export default function OrderConfirmationPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const { refreshPlayerInfo } = useUser()
   const [order, setOrder] = useState<Order | null>(null)
   const [notFound, setNotFound] = useState(false)
@@ -16,7 +19,7 @@ export default function OrderConfirmationPage({ params }: { params: { id: string
   useEffect(() => {
     try {
       const orders: Order[] = JSON.parse(localStorage.getItem('urban_orders') ?? '[]')
-      const found = orders.find((o) => o.orderId === params.id)
+      const found = orders.find((o) => o.orderId === id)
       if (found) {
         setOrder(found)
         // Refresh points so the navbar badge updates
@@ -27,7 +30,7 @@ export default function OrderConfirmationPage({ params }: { params: { id: string
     } catch {
       setNotFound(true)
     }
-  }, [params.id])
+  }, [id])
 
   if (notFound) {
     return (

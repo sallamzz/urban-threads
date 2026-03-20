@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+export const runtime = 'edge'
+
+import { useState, use } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -14,9 +16,11 @@ import { Button } from '@/components/ui/Button'
 import { toast } from '@/components/ui/Toast'
 import { ProductCard } from '@/components/product/ProductCard'
 
-export default function ProductPage({ params }: { params: { id: string } }) {
-  const product = getProductById(params.id)
-  if (!product) notFound()
+export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  const productData = getProductById(id)
+  if (!productData) notFound()
+  const product = productData!
 
   const { addItem } = useCart()
   const [selectedSize, setSelectedSize] = useState(product.sizes[0])
