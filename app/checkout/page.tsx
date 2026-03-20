@@ -69,7 +69,7 @@ export default function CheckoutPage() {
     let holdRefId: string | null = null
 
     try {
-      // Step 1: Create hold if redeeming points
+      // ── Step 1: Hold points if redeeming ──────────────────────────
       if (pointsToRedeem > 0) {
         const holdRes = await fetch('/api/gameball/hold', {
           method: 'POST',
@@ -81,33 +81,56 @@ export default function CheckoutPage() {
           }),
         })
         const holdData = await holdRes.json()
+
         if (!holdRes.ok || holdData.error) {
-          setError(holdData.error || 'Could not reserve points. Please try again.')
+          // Extract the most useful error detail from the response
+          const detail =
+            holdData?.body?.validationMessages?.[0] ||
+            holdData?.error?.detail ||
+            holdData?.error ||
+            holdData?.message ||
+            holdData?.title ||
+            'Unknown hold error'
+          console.error('[hold failed]', holdRes.status, holdData)
+          setError(`Could not reserve points: ${detail}`)
           setIsSubmitting(false)
           return
         }
+
         // Gameball returns holdReference in the response
-        holdRefId = holdData?.holdReference ?? holdData?.holdRefId ?? holdData?.id ?? null
+        holdRefId =
+          holdData?.holdReference ??
+          holdData?.holdRefId ??
+          holdData?.id ??
+          holdData?.data?.holdReference ??
+          null
+
         if (!holdRefId) {
-          holdRefId = holdData?.data?.holdReference ?? holdData?.data?.holdRefId ?? null
+          console.error('[hold] Success status but no holdReference in response:', holdData)
+          setError('Points hold succeeded but no reference was returned. Please try again.')
+          setIsSubmitting(false)
+          return
         }
       }
 
-      // Step 2: Submit order to Gameball
+      // ── Step 2: Submit order to Gameball ──────────────────────────
       const orderPayload: Record<string, unknown> = {
         customerId: user.playerId,
         orderId,
-        totalPaid: total / 100, // convert cents to dollars — post-discount; this is what Gameball uses for reward calculation
+        totalPaid: total / 100, // cents → dollars; post-discount amount for reward calculation
+        totalPrice: subtotal / 100, // cents → dollars; original cart value
         orderDate: new Date().toISOString(),
         channel: 'web',
         lineItems: items.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
-          price: item.product.price / 100, // convert cents to dollars
+          price: item.product.price / 100,
           title: item.product.name,
           category: [item.product.category],
         })),
       }
+
+      // Attach the hold reference so Gameball redeems the held points
       if (holdRefId) {
         orderPayload.redemption = { pointsHoldReference: holdRefId }
       }
@@ -119,12 +142,18 @@ export default function CheckoutPage() {
       })
       const orderData = await orderRes.json()
 
-      // Order submission failure is non-critical — log it but continue
       if (!orderRes.ok) {
         console.error('Gameball order submission failed:', orderData)
+        // If the order fails AND we had a hold, try to release it
+        if (holdRefId) {
+          fetch(`/api/gameball/hold?ref=${encodeURIComponent(holdRefId)}`, {
+            method: 'DELETE',
+          }).catch(() => {})
+        }
+        // Still proceed with local order — Gameball failure shouldn't block the UX
       }
 
-      // Step 2.5: Fire purchase_completed event to trigger reward campaigns
+      // ── Step 2.5: Fire purchase_completed event ───────────────────
       fetch('/api/gameball/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -138,9 +167,9 @@ export default function CheckoutPage() {
           },
           customerId: user.playerId,
         }),
-      }).catch(() => {}) // fire-and-forget; non-critical
+      }).catch(() => {}) // fire-and-forget
 
-      // Step 3: Save order to localStorage
+      // ── Step 3: Save order to localStorage ────────────────────────
       const order: Order = {
         orderId,
         items: [...items],
@@ -154,13 +183,13 @@ export default function CheckoutPage() {
 
       try {
         const existing: Order[] = JSON.parse(localStorage.getItem('urban_orders') ?? '[]')
-        const updated = [order, ...existing].slice(0, 20) // keep max 20
+        const updated = [order, ...existing].slice(0, 20)
         localStorage.setItem('urban_orders', JSON.stringify(updated))
       } catch {
         // ignore storage errors
       }
 
-      // Step 4: Clear cart and navigate
+      // ── Step 4: Clear cart and navigate ───────────────────────────
       clearCart()
       refreshPlayerInfo()
       router.push(`/order/${orderId}`)

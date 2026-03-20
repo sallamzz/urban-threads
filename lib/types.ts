@@ -31,17 +31,6 @@ export interface PlayerInfo {
   pointsToNextTier?: number
 }
 
-export interface Badge {
-  id: string
-  name: string
-  description: string
-  imageUrl?: string
-  isAchieved: boolean
-  progress?: number       // 0-100
-  currentValue?: number
-  targetValue?: number
-}
-
 export interface Order {
   orderId: string
   items: CartItem[]

@@ -10,7 +10,12 @@ export async function POST(req: NextRequest) {
     if (!body.customerId || !body.pointsToHold) {
       return NextResponse.json({ error: 'Missing customerId or pointsToHold' }, { status: 400 })
     }
-    const res = await gbPost('transactions/hold', body)
+    const res = await gbPost('transactions/hold', {
+      customerId: body.customerId,
+      pointsToHold: body.pointsToHold,
+      transactionTime: body.transactionTime || new Date().toISOString(),
+      ignoreOTP: true,
+    })
     const data = await res.json()
     return NextResponse.json(data, { status: res.status })
   } catch (err) {

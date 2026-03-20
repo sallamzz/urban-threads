@@ -12,7 +12,6 @@ All Gameball API calls are proxied through **separate Next.js Route Handlers** u
 | `hold/route.ts` | APIKey + SecretKey | `POST/DELETE /integrations/transactions/hold` |
 | `points/route.ts` | APIKey | `GET /integrations/customers/{id}/points-balance` |
 | `tier/route.ts` | APIKey | `GET /integrations/customers/{id}/tier-progress` |
-| `campaigns/route.ts` | APIKey | `GET /integrations/customers/{id}/campaigns` |
 
 A shared helper (`lib/gameball.ts`) provides `gbGet`, `gbPost`, and `gbDel` with the correct auth headers. The **SecretKey never reaches the browser** — only `NEXT_PUBLIC_GAMEBALL_API_KEY` is exposed client-side for the Gameball widget.
 
@@ -20,11 +19,11 @@ A shared helper (`lib/gameball.ts`) provides `gbGet`, `gbPost`, and `gbDel` with
 
 1. **Customer Registration** — Onboarding modal on first visit → `POST /integrations/customers` with `customerAttributes` (displayName, email). Non-blocking: user can browse immediately if the API fails; registration retries on next visit.
 
-2. **Events** — `profile_completed` fires only after successful registration (so the customer exists in Gameball first). `write_review` sends `has_image`, `product_id`, and `rating` as metadata — the dashboard campaign distinguishes image reviews from text-only.
+2. **Events** — `profile_completed` fires only after successful registration (so the customer exists in Gameball first). `write_review` sends `has_image`, `product_id`, and `rating` as metadata. `purchase_completed` fires after order submission to trigger the dashboard's "Event Based Earn" campaign (awards 1000 points + badge).
 
 3. **Order & Redemption** — Hold → Order pattern. If redeeming: `POST /transactions/hold` first, then pass `holdReference` in the order's `redemption` field. `totalPaid` is always the post-discount amount in dollars (what Gameball uses for reward calculation). `lineItems` include productId, quantity, price, title, and category.
 
-4. **Profile Page** — Points balance, tier progress, and campaigns fetched in parallel. Badges render as achieved (gold border, trophy) or unachieved (grayscale, progress bar).
+4. **Profile Page** — Points balance and tier progress fetched in parallel. Achievements section shows milestone-based badges (First Purchase, Points Collector, Big Spender, Repeat Customer, Smart Saver, Tier Climber) derived from real order history and loyalty data — no external badge API needed.
 
 ## Assumptions
 

@@ -117,9 +117,9 @@ export default function AccountPage() {
               {nextTier && (
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs text-navy-500">Next: {nextTier}</span>
-                  {pointsToNextTier != null && (
+                  {pointsToNextTier != null && pointsToNextTier > 0 && (
                     <span className="text-xs text-navy-500">
-                      {formatPoints(pointsToNextTier)} pts to go
+                      ${pointsToNextTier} spend to go
                     </span>
                   )}
                 </div>
