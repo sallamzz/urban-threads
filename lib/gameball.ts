@@ -22,9 +22,10 @@ function getHeaders(includeContentType = false): Record<string, string> {
 }
 
 export function gbGet(path: string) {
+  // Note: `cache: 'no-store'` is not supported on Cloudflare Workers edge runtime.
+  // Cloudflare does not cache outbound fetch requests by default.
   return fetch(`${getBase()}/integrations/${path}`, {
     headers: getHeaders(),
-    cache: 'no-store',
   })
 }
 
