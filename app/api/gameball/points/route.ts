@@ -1,28 +1,21 @@
 export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getPointsBalance } from '@/lib/gameball'
+import { gbGet } from '@/lib/gameball'
 
+/** GET /api/gameball/points?customerId=... → Gameball GET /integrations/customers/{id}/points-balance */
 export async function GET(req: NextRequest) {
-  const customerId = req.nextUrl.searchParams.get('customerId')
-  if (!customerId) {
+  const id = req.nextUrl.searchParams.get('customerId')
+  if (!id) {
     return NextResponse.json({ error: 'Missing customerId' }, { status: 400 })
   }
   try {
-    const data = await getPointsBalance(customerId)
-    // Normalize: Gameball v4 returns totalPointsBalance or availablePointsBalance
-    const points =
-      data?.availablePointsBalance ??
-      data?.totalPointsBalance ??
-      data?.pointsBalance ??
-      data?.balance ??
-      data?.points ??
-      0
-    return NextResponse.json({ points, raw: data })
+    const res = await gbGet(`customers/${encodeURIComponent(id)}/points-balance`)
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[/api/gameball/points]', message)
-    // Return 0 points rather than crashing the UI — points display is non-critical
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[points]', msg)
     return NextResponse.json({ points: 0 })
   }
 }

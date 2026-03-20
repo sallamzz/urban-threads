@@ -24,28 +24,31 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const fetchPlayerInfo = useCallback(async (playerId: string) => {
     setIsLoadingPlayerInfo(true)
     try {
-      const res = await fetch(`/api/gameball/points?customerId=${encodeURIComponent(playerId)}`)
-      const data = await res.json()
-      const points = data?.points ?? 0
+      const id = encodeURIComponent(playerId)
 
-      // Also try to fetch tier info (non-blocking)
-      let tierData: Record<string, unknown> = {}
-      try {
-        const tierRes = await fetch(`/api/gameball/tier?customerId=${encodeURIComponent(playerId)}`)
-        tierData = await tierRes.json()
-      } catch {
-        // ignore
-      }
+      // Fetch points + tier in parallel
+      const [pointsRes, tierRes] = await Promise.all([
+        fetch(`/api/gameball/points?customerId=${id}`),
+        fetch(`/api/gameball/tier?customerId=${id}`),
+      ])
 
-      // Gameball returns { current: {name, minPorgress}, next: {name, minPorgress}, progress }
-      // Also handle legacy array format
+      const pointsData = await pointsRes.json().catch(() => ({}))
+      const tierData = await tierRes.json().catch(() => ({}))
+
+      const points =
+        pointsData?.availablePointsBalance ??
+        pointsData?.totalPointsBalance ??
+        pointsData?.pointsBalance ??
+        pointsData?.points ??
+        0
+
       const tier = Array.isArray(tierData) ? tierData[0] : tierData
       setPlayerInfo({
         points,
-        currentTier: (tier?.current?.name ?? tier?.tierName ?? tier?.currentTierName) as string | undefined,
-        nextTier: (tier?.next?.name ?? tier?.nextTierName) as string | undefined,
-        tierProgress: (tier?.progress ?? tier?.completionPercentage) as number | undefined,
-        pointsToNextTier: (tier?.next?.minPorgress ?? tier?.nextTierProgress) as number | undefined,
+        currentTier: tier?.current?.name ?? tier?.tierName ?? undefined,
+        nextTier: tier?.next?.name ?? undefined,
+        tierProgress: tier?.progress ?? tier?.completionPercentage ?? undefined,
+        pointsToNextTier: tier?.next?.minPorgress ?? undefined,
       })
     } catch {
       // silently fail — show 0 points
@@ -62,12 +65,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const parsed: User = JSON.parse(stored)
         setUser(parsed)
         setShowOnboarding(false)
-        // Fetch live points
         fetchPlayerInfo(parsed.playerId)
-        // Retry registration if it previously failed
-        if (!parsed.isRegistered) {
-          registerWithGameball(parsed)
-        }
+        if (!parsed.isRegistered) registerWithGameball(parsed)
       } else {
         setShowOnboarding(true)
       }
@@ -75,7 +74,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setShowOnboarding(true)
     }
     setMounted(true)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function registerWithGameball(u: User): Promise<boolean> {
@@ -85,8 +84,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId: u.playerId,
-          displayName: u.displayName,
-          email: u.email,
+          customerAttributes: { displayName: u.displayName, email: u.email },
         }),
       })
       if (res.ok) {
@@ -95,25 +93,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('urban_user', JSON.stringify(updated))
         return true
       }
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
     return false
-  }
-
-  async function fireProfileCompletedEvent(playerId: string) {
-    try {
-      await fetch('/api/gameball/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerId: playerId,
-          events: { profile_completed: {} },
-        }),
-      })
-    } catch {
-      // non-critical
-    }
   }
 
   const completeOnboarding = useCallback(
@@ -126,12 +107,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('urban_user', JSON.stringify(newUser))
       setShowOnboarding(false)
 
-      // Register with Gameball (non-blocking to UX)
       const registered = await registerWithGameball(newUser)
-
       if (registered) {
-        // Fire profile_completed event only after successful registration
-        await fireProfileCompletedEvent(playerId)
+        // Fire profile_completed only after the customer exists in Gameball
+        await fetch('/api/gameball/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerId: playerId, events: { profile_completed: {} } }),
+        })
         await fetchPlayerInfo(playerId)
       }
     },
@@ -139,42 +122,28 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   )
 
   const refreshPlayerInfo = useCallback(async () => {
-    if (user?.playerId) {
-      await fetchPlayerInfo(user.playerId)
-    }
+    if (user?.playerId) await fetchPlayerInfo(user.playerId)
   }, [user?.playerId, fetchPlayerInfo])
 
   if (!mounted) {
-    // Prevent hydration mismatch — render children with empty state
-    // showOnboarding must be false here to match SSR output
     return (
       <UserContext.Provider
         value={{
-          user: null,
-          playerInfo: { points: 0 },
-          isLoadingPlayerInfo: false,
-          showOnboarding: false,
-          completeOnboarding,
-          refreshPlayerInfo,
+          user: null, playerInfo: { points: 0 }, isLoadingPlayerInfo: false,
+          showOnboarding: false, completeOnboarding, refreshPlayerInfo,
         }}
       >
         {children}
       </UserContext.Provider>
     )
   }
-  // After mount: if no user exists, showOnboarding must be true regardless
-  // of any race condition — derive it directly from user state
-  const resolvedShowOnboarding = showOnboarding || (!user)
 
   return (
     <UserContext.Provider
       value={{
-        user,
-        playerInfo,
-        isLoadingPlayerInfo,
-        showOnboarding: resolvedShowOnboarding,
-        completeOnboarding,
-        refreshPlayerInfo,
+        user, playerInfo, isLoadingPlayerInfo,
+        showOnboarding: showOnboarding || !user,
+        completeOnboarding, refreshPlayerInfo,
       }}
     >
       {children}

@@ -1,19 +1,21 @@
 export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getTierProgress } from '@/lib/gameball'
+import { gbGet } from '@/lib/gameball'
 
+/** GET /api/gameball/tier?customerId=... → Gameball GET /integrations/customers/{id}/tier-progress */
 export async function GET(req: NextRequest) {
-  const customerId = req.nextUrl.searchParams.get('customerId')
-  if (!customerId) {
+  const id = req.nextUrl.searchParams.get('customerId')
+  if (!id) {
     return NextResponse.json({ error: 'Missing customerId' }, { status: 400 })
   }
   try {
-    const data = await getTierProgress(customerId)
-    return NextResponse.json(data)
+    const res = await gbGet(`customers/${encodeURIComponent(id)}/tier-progress`)
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[/api/gameball/tier]', message)
-    return NextResponse.json({ currentTier: null, nextTier: null, progress: 0 })
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[tier]', msg)
+    return NextResponse.json({ current: null, next: null, progress: 0 })
   }
 }

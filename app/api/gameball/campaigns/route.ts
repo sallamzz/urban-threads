@@ -1,19 +1,21 @@
 export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getCampaigns } from '@/lib/gameball'
+import { gbGet } from '@/lib/gameball'
 
+/** GET /api/gameball/campaigns?customerId=... → Gameball GET /integrations/customers/{id}/campaigns */
 export async function GET(req: NextRequest) {
-  const customerId = req.nextUrl.searchParams.get('customerId')
-  if (!customerId) {
+  const id = req.nextUrl.searchParams.get('customerId')
+  if (!id) {
     return NextResponse.json({ error: 'Missing customerId' }, { status: 400 })
   }
   try {
-    const data = await getCampaigns(customerId)
-    return NextResponse.json(data)
+    const res = await gbGet(`customers/${encodeURIComponent(id)}/campaigns`)
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[/api/gameball/campaigns]', message)
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[campaigns]', msg)
     return NextResponse.json({ campaigns: [], badges: [] })
   }
 }

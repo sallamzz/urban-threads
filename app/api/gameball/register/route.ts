@@ -1,22 +1,21 @@
 export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { registerCustomer } from '@/lib/gameball'
+import { gbPost } from '@/lib/gameball'
 
+/** POST /api/gameball/register → Gameball POST /integrations/customers */
 export async function POST(req: NextRequest) {
   try {
-    const { customerId, displayName, email } = await req.json()
-    if (!customerId || !displayName || !email) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    const body = await req.json()
+    if (!body.customerId) {
+      return NextResponse.json({ error: 'Missing customerId' }, { status: 400 })
     }
-    const result = await registerCustomer({
-      customerId,
-      customerAttributes: { displayName, email },
-    })
-    return NextResponse.json(result)
+    const res = await gbPost('customers', body)
+    const data = await res.json().catch(() => ({}))
+    return NextResponse.json(data, { status: res.status })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[/api/gameball/register]', message)
-    return NextResponse.json({ error: message }, { status: 500 })
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[register]', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

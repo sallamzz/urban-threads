@@ -1,48 +1,43 @@
 # UrbanThreads — Gameball Integration Notes
 
-## APIs Used
+## Architecture
 
-| Integration | Endpoint | Auth |
-|-------------|----------|------|
-| Customer registration | `POST /integrations/customers` | APIKey + SecretKey |
-| Custom events | `POST /integrations/events` | APIKey + SecretKey |
-| Points balance | `GET /integrations/customers/{id}/points-balance` | APIKey + SecretKey |
-| Tier progress | `GET /integrations/customers/{id}/tier-progress` | APIKey + SecretKey |
-| Badges / campaigns | `GET /integrations/customers/{id}/campaigns` | APIKey + SecretKey |
-| Points hold | `POST /integrations/transactions/hold` | APIKey + SecretKey |
-| Release hold | `DELETE /integrations/transactions/hold/{ref}` | APIKey + SecretKey |
-| Order (earn + redeem) | `POST /integrations/orders` | APIKey + SecretKey |
+All Gameball API calls are proxied through **separate Next.js Route Handlers** under `app/api/gameball/`. Each route has one job and uses the appropriate authentication level:
 
-All API calls are proxied through Next.js Route Handlers (`app/api/gameball/*`) — the `SecretKey` never reaches the browser. Only `NEXT_PUBLIC_GAMEBALL_API_KEY` is exposed client-side (used for the Gameball widget).
+| Route File | Auth | Gameball Endpoint |
+|---|---|---|
+| `register/route.ts` | APIKey + SecretKey | `POST /integrations/customers` |
+| `events/route.ts` | APIKey + SecretKey | `POST /integrations/events` |
+| `orders/route.ts` | APIKey + SecretKey | `POST /integrations/orders` |
+| `hold/route.ts` | APIKey + SecretKey | `POST/DELETE /integrations/transactions/hold` |
+| `points/route.ts` | APIKey | `GET /integrations/customers/{id}/points-balance` |
+| `tier/route.ts` | APIKey | `GET /integrations/customers/{id}/tier-progress` |
+| `campaigns/route.ts` | APIKey | `GET /integrations/customers/{id}/campaigns` |
 
-## Four Integration Requirements
+A shared helper (`lib/gameball.ts`) provides `gbGet`, `gbPost`, and `gbDel` with the correct auth headers. The **SecretKey never reaches the browser** — only `NEXT_PUBLIC_GAMEBALL_API_KEY` is exposed client-side for the Gameball widget.
 
-1. **Customer Registration** — On first visit, an onboarding modal collects name and email. A UUID is generated client-side as `customerId`. `POST /integrations/customers` is called with `customerAttributes` (displayName, email). Registration is non-blocking: the user can browse immediately; failure is retried on next visit.
+## The Four Required Integrations
 
-2. **Events** — Two events are tracked:
-   - `profile_completed: {}` — fires once immediately after successful registration (not before, to ensure the customer exists in Gameball first).
-   - `write_review: { has_image: "true"|"false", product_id: "...", rating: "..." }` — fires when a user submits a review from any product detail page. A `submitted` flag prevents duplicate firing.
+1. **Customer Registration** — Onboarding modal on first visit → `POST /integrations/customers` with `customerAttributes` (displayName, email). Non-blocking: user can browse immediately if the API fails; registration retries on next visit.
 
-3. **Order Earn + Redeem** — At checkout:
-   - If redeeming points: `POST /transactions/hold` first. The returned `holdReference` is passed as `redemption.pointsHoldReference` in the order call.
-   - `POST /integrations/orders` is called with `totalPaid` (post-discount, in dollars), `lineItems` (with productId, quantity, price, title, category), and `channel: "web"`.
-   - Hold is blocking: the flow aborts if the hold fails, preventing order submission without confirmed redemption.
+2. **Events** — `profile_completed` fires only after successful registration (so the customer exists in Gameball first). `write_review` sends `has_image`, `product_id`, and `rating` as metadata — the dashboard campaign distinguishes image reviews from text-only.
 
-4. **Customer Profile Page** — `/account` fetches points balance, tier progress, and campaigns (badges) in a single refresh cycle. Badges are rendered as achieved (full color, gold border) or unachieved (grayscale, progress bar) based on `isAchieved`, `achievedCount`, or `completionPercentage`.
+3. **Order & Redemption** — Hold → Order pattern. If redeeming: `POST /transactions/hold` first, then pass `holdReference` in the order's `redemption` field. `totalPaid` is always the post-discount amount in dollars (what Gameball uses for reward calculation). `lineItems` include productId, quantity, price, title, and category.
+
+4. **Profile Page** — Points balance, tier progress, and campaigns fetched in parallel. Badges render as achieved (gold border, trophy) or unachieved (grayscale, progress bar).
 
 ## Assumptions
 
-- **100 pts = $1** for display purposes (matching the dashboard's `1pt = $0.01` redemption rate).
-- The Gameball widget is loaded via the official `gameball-init.min.js` script using the queue-based `GbLoadInit` stub pattern.
-- No mobile number collected — `customerAttributes` uses name and email only.
-- Orders are persisted in `localStorage` (no backend database). Gameball is the source of truth for points, tiers, and badges.
+- 100 points = $1 redemption rate (matching dashboard config)
+- Only `displayName` and `email` collected — minimal friction for a demo
+- Orders stored in localStorage (no DB) — Gameball is the source of truth for points/tiers
+- Widget initialized with the `GbSdk` queue stub pattern per Gameball docs
 
-## What Would Be Different in Production
+## What Would Change in Production
 
-- **Server-side secrets**: Ensure `GAMEBALL_BASE_URL`, `GAMEBALL_API_KEY`, and `GAMEBALL_SECRET_KEY` are set as environment variables in the hosting platform (e.g., Cloudflare Pages, Vercel).
-- **COD orders**: Do not call the Order API at checkout — only after payment confirmation.
-- **Refunds**: Call `POST /integrations/transactions/refund` with the original `orderId` on every refund to reverse earned points.
-- **Hold expiry**: Surface a countdown timer at checkout; release and re-hold if the 10-minute window elapses.
-- **Pending points**: Clearly distinguish pending vs. available in the UI so customers understand the 14-day return window.
-- **Error recovery**: If the order API fails after a successful hold, call `DELETE /hold` to release the points immediately rather than waiting for automatic expiry.
-- **Idempotency**: Generate deterministic `orderId` values tied to the checkout session so re-submissions are safe.
+- **COD orders**: Only call the Order API after payment confirmation, not on placement
+- **Refunds**: Call `POST /integrations/transactions/refund` with original `orderId`
+- **Hold expiry**: Show countdown at checkout; release + re-hold if the 10-min window lapses
+- **Pending vs available points**: Distinguish in UI (14-day return window)
+- **Error recovery**: If order API fails after a successful hold, `DELETE /hold` to release immediately
+- **Idempotency**: Deterministic `orderId` tied to checkout session to prevent double-earn

@@ -1,3 +1,5 @@
+// ── UI / App types ──────────────────────────────────────────────
+
 export interface Product {
   id: string
   name: string
@@ -25,7 +27,7 @@ export interface PlayerInfo {
   points: number
   currentTier?: string
   nextTier?: string
-  tierProgress?: number // 0-100 percentage
+  tierProgress?: number   // 0-100
   pointsToNextTier?: number
 }
 
@@ -35,7 +37,7 @@ export interface Badge {
   description: string
   imageUrl?: string
   isAchieved: boolean
-  progress?: number // 0-100 percentage
+  progress?: number       // 0-100
   currentValue?: number
   targetValue?: number
 }
@@ -43,54 +45,10 @@ export interface Badge {
 export interface Order {
   orderId: string
   items: CartItem[]
-  subtotal: number // in cents
-  discount: number // in cents (points-based)
-  total: number // in cents
-  pointsEarned?: number
+  subtotal: number        // in cents
+  discount: number        // in cents (points-based)
+  total: number           // in cents
   pointsRedeemed: number
   createdAt: string
   customerName: string
-}
-
-// Gameball API payload types
-export interface GameballRegisterPayload {
-  customerId: string
-  customerAttributes: {
-    displayName: string
-    email: string
-    mobile?: string
-  }
-}
-
-export interface GameballEventPayload {
-  customerId: string
-  events: Record<string, Record<string, string> | object>
-}
-
-export interface GameballHoldPayload {
-  customerId: string
-  pointsToHold: number
-  transactionTime?: string
-}
-
-export interface GameballLineItem {
-  productId: string
-  quantity: number
-  price: number // in dollars
-  title?: string
-  category?: string[]
-  weight?: number
-  sku?: string
-}
-
-export interface GameballOrderPayload {
-  customerId: string
-  orderId: string
-  totalPaid: number // in dollars
-  orderDate: string // ISO 8601
-  channel?: string
-  lineItems?: GameballLineItem[]
-  redemption?: {
-    pointsHoldReference: string
-  }
 }

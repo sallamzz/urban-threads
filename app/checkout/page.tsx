@@ -74,7 +74,11 @@ export default function CheckoutPage() {
         const holdRes = await fetch('/api/gameball/hold', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customerId: user.playerId, points: pointsToRedeem }),
+          body: JSON.stringify({
+            customerId: user.playerId,
+            pointsToHold: pointsToRedeem,
+            transactionTime: new Date().toISOString(),
+          }),
         })
         const holdData = await holdRes.json()
         if (!holdRes.ok || holdData.error) {
@@ -108,7 +112,7 @@ export default function CheckoutPage() {
         orderPayload.redemption = { pointsHoldReference: holdRefId }
       }
 
-      const orderRes = await fetch('/api/gameball/order', {
+      const orderRes = await fetch('/api/gameball/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderPayload),
