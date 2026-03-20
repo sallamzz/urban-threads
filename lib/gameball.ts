@@ -6,29 +6,31 @@ import {
   GameballOrderPayload,
 } from './types'
 
-const BASE = process.env.GAMEBALL_BASE_URL!
-const API_KEY = process.env.GAMEBALL_API_KEY || process.env.NEXT_PUBLIC_GAMEBALL_API_KEY!
-const SECRET_KEY = process.env.GAMEBALL_SECRET_KEY!
+const BASE = process.env.GAMEBALL_BASE_URL || ''
+const API_KEY = process.env.GAMEBALL_API_KEY || process.env.NEXT_PUBLIC_GAMEBALL_API_KEY || ''
+const SECRET_KEY = process.env.GAMEBALL_SECRET_KEY || ''
 
-// Log on module init so key issues surface immediately in the server console
-console.log(
-  `[gameball] BASE=${BASE} | APIKey=${API_KEY ? API_KEY.slice(0, 8) + '...' : 'MISSING'} | SecretKey=${SECRET_KEY ? SECRET_KEY.slice(0, 8) + '...' : 'MISSING'}`
-)
+function assertConfigured() {
+  if (!BASE) throw new Error('GAMEBALL_BASE_URL is not configured')
+  if (!API_KEY) throw new Error('GAMEBALL_API_KEY is not configured')
+  if (!SECRET_KEY) throw new Error('GAMEBALL_SECRET_KEY is not configured')
+}
 
-const baseHeaders = {
+const baseHeaders = (): Record<string, string> => ({
   'Content-Type': 'application/json',
   APIKey: API_KEY,
-}
+})
 
-const secureHeaders = {
-  ...baseHeaders,
+const secureHeaders = (): Record<string, string> => ({
+  ...baseHeaders(),
   SecretKey: SECRET_KEY,
-}
+})
 
 export async function registerCustomer(payload: GameballRegisterPayload) {
+  assertConfigured()
   const res = await fetch(`${BASE}/integrations/customers`, {
     method: 'POST',
-    headers: secureHeaders,
+    headers: secureHeaders(),
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
@@ -39,8 +41,9 @@ export async function registerCustomer(payload: GameballRegisterPayload) {
 }
 
 export async function getCustomer(customerId: string) {
+  assertConfigured()
   const res = await fetch(`${BASE}/integrations/customers/${encodeURIComponent(customerId)}`, {
-    headers: secureHeaders,
+    headers: secureHeaders(),
     cache: 'no-store',
   })
   if (!res.ok) throw new Error(`Gameball getCustomer failed (${res.status})`)
@@ -48,9 +51,10 @@ export async function getCustomer(customerId: string) {
 }
 
 export async function getPointsBalance(customerId: string) {
+  assertConfigured()
   const res = await fetch(
     `${BASE}/integrations/customers/${encodeURIComponent(customerId)}/points-balance`,
-    { headers: secureHeaders, cache: 'no-store' }
+    { headers: secureHeaders(), cache: 'no-store' }
   )
   if (!res.ok) {
     const text = await res.text()
@@ -60,9 +64,10 @@ export async function getPointsBalance(customerId: string) {
 }
 
 export async function getTierProgress(customerId: string) {
+  assertConfigured()
   const res = await fetch(
     `${BASE}/integrations/customers/${encodeURIComponent(customerId)}/tier-progress`,
-    { headers: secureHeaders, cache: 'no-store' }
+    { headers: secureHeaders(), cache: 'no-store' }
   )
   if (!res.ok) {
     const text = await res.text()
@@ -72,9 +77,10 @@ export async function getTierProgress(customerId: string) {
 }
 
 export async function getCampaigns(customerId: string) {
+  assertConfigured()
   const res = await fetch(
     `${BASE}/integrations/customers/${encodeURIComponent(customerId)}/campaigns`,
-    { headers: secureHeaders, cache: 'no-store' }
+    { headers: secureHeaders(), cache: 'no-store' }
   )
   if (!res.ok) {
     const text = await res.text()
@@ -84,9 +90,10 @@ export async function getCampaigns(customerId: string) {
 }
 
 export async function trackEvent(payload: GameballEventPayload) {
+  assertConfigured()
   const res = await fetch(`${BASE}/integrations/events`, {
     method: 'POST',
-    headers: secureHeaders,
+    headers: secureHeaders(),
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
@@ -97,9 +104,10 @@ export async function trackEvent(payload: GameballEventPayload) {
 }
 
 export async function createHold(payload: GameballHoldPayload) {
+  assertConfigured()
   const res = await fetch(`${BASE}/integrations/transactions/hold`, {
     method: 'POST',
-    headers: secureHeaders,
+    headers: secureHeaders(),
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
@@ -110,9 +118,10 @@ export async function createHold(payload: GameballHoldPayload) {
 }
 
 export async function deleteHold(holdRefId: string) {
+  assertConfigured()
   const res = await fetch(
     `${BASE}/integrations/transactions/hold/${encodeURIComponent(holdRefId)}`,
-    { method: 'DELETE', headers: secureHeaders }
+    { method: 'DELETE', headers: secureHeaders() }
   )
   if (!res.ok) {
     const text = await res.text()
@@ -122,9 +131,10 @@ export async function deleteHold(holdRefId: string) {
 }
 
 export async function submitOrder(payload: GameballOrderPayload) {
+  assertConfigured()
   const res = await fetch(`${BASE}/integrations/orders`, {
     method: 'POST',
-    headers: secureHeaders,
+    headers: secureHeaders(),
     body: JSON.stringify(payload),
   })
   if (!res.ok) {

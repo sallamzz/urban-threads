@@ -1,7 +1,5 @@
 'use client'
 
-export const runtime = 'edge'
-
 import { useEffect, useState, use } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -30,6 +28,7 @@ export default function OrderConfirmationPage({ params }: { params: Promise<{ id
     } catch {
       setNotFound(true)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   if (notFound) {

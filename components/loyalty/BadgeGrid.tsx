@@ -21,7 +21,6 @@ export function BadgeGrid() {
         const res = await fetch(`/api/gameball/campaigns?customerId=${encodeURIComponent(user!.playerId)}`)
         const data = await res.json()
 
-        console.log('[BadgeGrid] raw API response:', data)
 
         // Normalize Gameball campaign/badge response
         // Response may be an array or have a campaigns/badges/data property
@@ -40,7 +39,6 @@ export function BadgeGrid() {
           raw = []
         }
 
-        console.log('[BadgeGrid] normalized raw array:', raw)
 
         const normalized: Badge[] = raw.map(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,7 +58,6 @@ export function BadgeGrid() {
             targetValue: item.targetValue ?? item.nextLevelPoints ?? undefined,
           })
         )
-        console.log('[BadgeGrid] final badges:', normalized)
         setBadges(normalized)
       } catch {
         setBadges([])

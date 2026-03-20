@@ -19,9 +19,7 @@ export async function POST(req: NextRequest) {
       ...(lineItems?.length ? { lineItems } : {}),
       ...(redemption ? { redemption } : {}),
     }
-    console.log('[/api/gameball/order] submitting:', JSON.stringify(payload))
     const result = await submitOrder(payload)
-    console.log('[/api/gameball/order] response:', JSON.stringify(result))
     return NextResponse.json(result)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

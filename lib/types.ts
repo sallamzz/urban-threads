@@ -73,11 +73,23 @@ export interface GameballHoldPayload {
   transactionTime?: string
 }
 
+export interface GameballLineItem {
+  productId: string
+  quantity: number
+  price: number // in dollars
+  title?: string
+  category?: string[]
+  weight?: number
+  sku?: string
+}
+
 export interface GameballOrderPayload {
   customerId: string
   orderId: string
   totalPaid: number // in dollars
   orderDate: string // ISO 8601
+  channel?: string
+  lineItems?: GameballLineItem[]
   redemption?: {
     pointsHoldReference: string
   }

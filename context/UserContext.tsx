@@ -129,10 +129,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Register with Gameball (non-blocking to UX)
       const registered = await registerWithGameball(newUser)
 
-      // Fire profile_completed event
-      await fireProfileCompletedEvent(playerId)
-
       if (registered) {
+        // Fire profile_completed event only after successful registration
+        await fireProfileCompletedEvent(playerId)
         await fetchPlayerInfo(playerId)
       }
     },

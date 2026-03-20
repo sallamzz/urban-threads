@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Star, Package, ChevronRight, User } from 'lucide-react'
+import { Star, Package, ChevronRight } from 'lucide-react'
 import { useUser } from '@/context/UserContext'
 import { BadgeGrid } from '@/components/loyalty/BadgeGrid'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -12,7 +12,6 @@ import { Order } from '@/lib/types'
 export default function AccountPage() {
   const { user, playerInfo, isLoadingPlayerInfo, refreshPlayerInfo } = useUser()
   const [orders, setOrders] = useState<Order[]>([])
-  const [tierData, setTierData] = useState<Record<string, unknown> | null>(null)
 
   useEffect(() => {
     // Load order history from localStorage
@@ -24,19 +23,10 @@ export default function AccountPage() {
     }
   }, [])
 
+  // Refresh player info (points + tier) once on mount
   useEffect(() => {
     refreshPlayerInfo()
-
-    // Also fetch tier details
-    if (user?.playerId) {
-      fetch(`/api/gameball/tier?customerId=${encodeURIComponent(user.playerId)}`)
-        .then((r) => r.json())
-        .then((d) => {
-          console.log('[Account] raw tier response:', d)
-          setTierData(d)
-        })
-        .catch(() => {})
-    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.playerId])
 
   if (!user) {
@@ -54,30 +44,7 @@ export default function AccountPage() {
     .toUpperCase()
     .slice(0, 2)
 
-  // Gameball returns { current: {name, minPorgress}, next: {name, minPorgress}, progress }
-  const tierItem = Array.isArray(tierData) ? tierData[0] : tierData
-  const currentTier =
-    (tierItem?.current?.name as string) ??
-    (tierItem?.tierName as string) ??
-    (tierItem?.currentTierName as string) ??
-    playerInfo.currentTier ??
-    null
-  const nextTier =
-    (tierItem?.next?.name as string) ??
-    (tierItem?.nextTierName as string) ??
-    playerInfo.nextTier ??
-    null
-  const tierProgress =
-    (tierItem?.progress as number) ??
-    (tierItem?.completionPercentage as number) ??
-    playerInfo.tierProgress ??
-    null
-  const pointsToNext =
-    (tierItem?.next?.minPorgress as number) ??
-    (tierItem?.nextTierProgress as number) ??
-    (tierItem?.remainingPoints as number) ??
-    playerInfo.pointsToNextTier ??
-    null
+  const { currentTier, nextTier, tierProgress, pointsToNextTier } = playerInfo
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -150,9 +117,9 @@ export default function AccountPage() {
               {nextTier && (
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs text-navy-500">Next: {nextTier}</span>
-                  {pointsToNext != null && (
+                  {pointsToNextTier != null && (
                     <span className="text-xs text-navy-500">
-                      {formatPoints(pointsToNext)} pts to go
+                      {formatPoints(pointsToNextTier)} pts to go
                     </span>
                   )}
                 </div>

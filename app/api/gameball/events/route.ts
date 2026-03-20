@@ -10,11 +10,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing customerId or events' }, { status: 400 })
     }
     const result = await trackEvent({ customerId, events })
-    return NextResponse.json(result)
+    return NextResponse.json({ ...result, tracked: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[/api/gameball/events]', message)
-    // Event tracking failure is non-critical — return 200 so client doesn't break
-    return NextResponse.json({ error: message, tracked: false }, { status: 200 })
+    return NextResponse.json({ error: message, tracked: false }, { status: 502 })
   }
 }
