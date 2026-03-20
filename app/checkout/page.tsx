@@ -124,6 +124,22 @@ export default function CheckoutPage() {
         console.error('Gameball order submission failed:', orderData)
       }
 
+      // Step 2.5: Fire purchase_completed event to trigger reward campaigns
+      fetch('/api/gameball/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          events: {
+            purchase_completed: {
+              orderId,
+              totalPaid: total / 100,
+              itemCount: items.length,
+            },
+          },
+          customerId: user.playerId,
+        }),
+      }).catch(() => {}) // fire-and-forget; non-critical
+
       // Step 3: Save order to localStorage
       const order: Order = {
         orderId,
