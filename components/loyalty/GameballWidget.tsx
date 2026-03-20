@@ -6,7 +6,9 @@ import { useUser } from '@/context/UserContext'
 declare global {
   interface Window {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    gbLoadInit: (config: { APIKey: string; lang: string; playerUniqueId?: string; playerAttributes?: Record<string, unknown> }) => void
+    gameball?: { init: (config: Record<string, unknown>) => void }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    gbLoadInit?: (config: Record<string, unknown>) => void
   }
 }
 
@@ -20,13 +22,21 @@ export function GameballWidget() {
     if (!apiKey) return
 
     function initWidget() {
-      if (typeof window.gbLoadInit === 'function') {
+      console.log('[GameballWidget] window.gameball:', window.gameball, '| window.gbLoadInit:', window.gbLoadInit)
+      if (window.gameball) {
+        window.gameball.init({
+          APIKey: apiKey!,
+          playerUniqueId: user!.playerId,
+        })
+      } else if (typeof window.gbLoadInit === 'function') {
         window.gbLoadInit({
           APIKey: apiKey!,
           lang: 'en',
           playerUniqueId: user!.playerId,
           playerAttributes: {},
         })
+      } else {
+        console.warn('[GameballWidget] Neither window.gameball nor window.gbLoadInit found after script load')
       }
     }
 
@@ -40,7 +50,10 @@ export function GameballWidget() {
     script.id = 'gameball-widget-script'
     script.src = 'https://assets.gameball.co/widget/js/gameball-init.min.js'
     script.async = true
-    script.onload = initWidget
+    script.onload = () => {
+      console.log('[GameballWidget] script loaded — window keys with "gameball":', Object.keys(window).filter(k => k.toLowerCase().includes('gameball')))
+      initWidget()
+    }
     document.body.appendChild(script)
     // Do not remove script on unmount — widget persists across navigation
   }, [user?.playerId])

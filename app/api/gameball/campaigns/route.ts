@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
   }
   try {
     const data = await getCampaigns(customerId)
+    console.log('[/api/gameball/campaigns] raw response keys:', JSON.stringify(Object.keys(data ?? {})))
+    console.log('[/api/gameball/campaigns] raw response:', JSON.stringify(data).slice(0, 500))
     return NextResponse.json(data)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
