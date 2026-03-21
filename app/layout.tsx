@@ -6,7 +6,6 @@ import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { CartDrawer } from '@/components/cart/CartDrawer'
 import { OnboardingModal } from '@/components/ui/Modal'
-import { GameballWidget } from '@/components/loyalty/GameballWidget'
 import { ToastContainer } from '@/components/ui/Toast'
 
 export const metadata: Metadata = {
@@ -29,7 +28,6 @@ export default function RootLayout({
             <OnboardingModal />
             <main className="min-h-screen animate-fade-up">{children}</main>
             <Footer />
-            <GameballWidget />
             <ToastContainer />
           </CartProvider>
         </UserProvider>
