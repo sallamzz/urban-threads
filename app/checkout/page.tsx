@@ -153,21 +153,9 @@ export default function CheckoutPage() {
         // Still proceed with local order — Gameball failure shouldn't block the UX
       }
 
-      // ── Step 2.5: Fire purchase_completed event ───────────────────
-      fetch('/api/gameball/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          events: {
-            purchase_completed: {
-              orderId,
-              totalPaid: total / 100,
-              itemCount: items.length,
-            },
-          },
-          customerId: user.playerId,
-        }),
-      }).catch(() => {}) // fire-and-forget
+      // Note: No separate purchase_completed event needed here —
+      // Gameball's Orders API automatically triggers reward campaigns
+      // and fires the purchase event internally.
 
       // ── Step 3: Save order to localStorage ────────────────────────
       const order: Order = {
